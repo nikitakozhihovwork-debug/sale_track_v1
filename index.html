@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talk Track</title>
+<style>
+  /* ===========================================================
+     DESIGN TOKENS
+     Тёмная, спокойная палитра для инструмента, которым пользуются
+     весь день параллельно с рабочей программой. Минимум цветов:
+     зелёный = озвучка/успех, красный = без озвучки/отставание.
+     Крупные цифры набраны моноширинным шрифтом — это счётчик,
+     как табло, а не текстовая страница.
+     =========================================================== */
+  :root{
+    --bg: #070a12;
+    --surface: #0e1322;
+    --surface-2: #131a2c;
+    --surface-3: #182036;
+    --border: #1e2740;
+    --border-soft: rgba(255,255,255,0.05);
+    --text-1: #eef1f8;
+    --text-2: #8d96ad;
+    --text-3: #5b6478;
+
+    --green: #35d399;
+    --green-soft: rgba(53,211,153,0.12);
+    --green-border: rgba(53,211,153,0.35);
+
+    --red: #f4685f;
+    --red-soft: rgba(244,104,95,0.12);
+    --red-border: rgba(244,104,95,0.35);
+
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-num: "SF Mono", "JetBrains Mono", "Cascadia Mono", ui-monospace, Consolas, monospace;
+
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --radius-pill: 999px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: radial-gradient(1200px 800px at 15% -10%, #0c1224 0%, var(--bg) 55%);
+    color: var(--text-1);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    display:flex;
+    min-height:100vh;
+  }
+  button{ font-family: inherit; }
+  input:focus-visible, button:focus-visible, select:focus-visible{
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  /* ---------------- SIDEBAR ---------------- */
+  .sidebar{
+    width: 232px;
+    flex-shrink:0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    padding: 22px 16px;
+    position: sticky;
+    top:0;
+    height:100vh;
+  }
+  .brand{
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    padding: 4px 10px 22px 10px;
+    color: var(--text-1);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .brand-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    flex-shrink:0;
+  }
+  .nav{ display:flex; flex-direction:column; gap:2px; }
+  .nav-item{
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+    cursor:pointer;
+    border:none;
+    background:transparent;
+    font-size: 14px;
+    text-align:left;
+    width:100%;
+    transition: background .15s ease, color .15s ease;
+  }
+  .nav-item:hover{ background: var(--surface-2); color: var(--text-1); }
+  .nav-item.active{ background: var(--surface-3); color: var(--text-1); }
+  .nav-icon{ width:18px; text-align:center; flex-shrink:0; }
+  .nav-label{ white-space:nowrap; overflow:hidden; }
+
+  .sidebar-spacer{ flex:1; }
+
+  .sidebar-user{
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    margin-top: 10px;
+  }
+  .sidebar-user-name{ font-size: 14px; font-weight:600; color: var(--text-1); }
+  .sidebar-user-goal{ font-size: 12px; color: var(--text-2); margin-top: 4px; }
+  .sidebar-user-edit{
+    margin-top: 10px;
+    width:100%;
+    padding: 7px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    cursor:pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .sidebar-user-edit:hover{ border-color: var(--text-3); color: var(--text-1); }
+
+  /* Collapsed sidebar for narrow screens */
+  @media (max-width: 800px){
+    .sidebar{ width: 68px; padding: 18px 10px; align-items:center; }
+    .brand-text, .nav-label, .sidebar-user-name, .sidebar-user-goal, .sidebar-user-edit{ display:none; }
+    .brand{ justify-content:center; padding-bottom: 18px; }
+    .nav-item{ justify-content:center; padding: 12px 0; }
+    .sidebar-user{ display:flex; justify-content:center; border-top:none; }
+  }
+
+  /* ---------------- MAIN ---------------- */
+  .main{
+    flex:1;
+    min-width:0;
+    padding: 28px 32px 60px 32px;
+  }
+  .view{ display:none; max-width: 760px; margin: 0 auto; }
+  .view.active{ display:block; animation: fadein .25s ease; }
+  @keyframes fadein{ from{ opacity:0; transform: translateY(4px);} to{ opacity:1; transform:none; } }
+
+  .page-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .page-title{ font-size: 20px; font-weight: 700; }
+  .page-date{ font-size: 13px; color: var(--text-2); margin-top: 2px; }
+  .page-clock{
+    font-family: var(--font-num);
+    font-size: 16px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------- HERO CARD ---------------- */
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+  .hero{
+    padding: 30px 30px 26px 30px;
+    text-align:center;
+    margin-bottom: 16px;
+  }
+  .hero-label{
+    font-size: 12.5px;
+    color: var(--text-2);
+    letter-spacing: 0.3px;
+    margin-bottom: 10px;
+  }
+  .hero-number{
+    font-family: var(--font-num);
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-number small{
+    font-size: 26px;
+    color: var(--text-3);
+    font-weight: 500;
+    margin-left: 6px;
+  }
+  .hero-bar-track{
+    margin-top: 20px;
+    height: 12px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-3);
+    overflow:hidden;
+    border: 1px solid var(--border-soft);
+  }
+  .hero-bar-fill{
+    height:100%;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(90deg, #1f9d6f, var(--green));
+    transition: width .5s cubic-bezier(.22,.68,.29,1.01);
+  }
+  .hero-bar-fill.over{ background: linear-gradient(90deg, #1f9d6f, var(--green), #7de8c4); }
+  .hero-footer{
+    display:flex;
+    justify-content:space-between;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .hero-percent{ font-weight:700; font-family: var(--font-num); }
+  .hero-percent-label{ color: var(--text-2); }
+
+  /* ---------------- ACTION BUTTONS ---------------- */
+  .actions{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 560px){ .actions{ grid-template-columns: 1fr; } }
+  .btn-action{
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    padding: 26px 18px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap: 6px;
+    transition: transform .1s ease, filter .15s ease;
+    user-select:none;
+  }
+  .btn-action:active{ transform: scale(0.98); }
+  .btn-action .glyph{ font-size: 30px; line-height:1; }
+  .btn-action .main-text{ font-size: 17px; font-weight:700; }
+  .btn-action .sub-text{ font-size: 12.5px; opacity: 0.85; }
+
+  .btn-offer{
+    background: var(--green-soft);
+    border-color: var(--green-border);
+    color: var(--green);
+  }
+  .btn-offer:hover{ filter: brightness(1.15); }
+
+  .btn-no-offer{
+    background: var(--red-soft);
+    border-color: var(--red-border);
+    color: var(--red);
+  }
+  .btn-no-offer:hover{ filter: brightness(1.15); }
+
+  .hint-row{
+    display:flex;
+    justify-content:center;
+    gap: 18px;
+    font-size: 11.5px;
+    color: var(--text-3);
+    margin-bottom: 22px;
+  }
+  .kbd{
+    font-family: var(--font-num);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 6px;
+    color: var(--text-2);
+  }
+
+  /* ---------------- STATS GRID ---------------- */
+  .stats-grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 620px){ .stats-grid{ grid-template-columns: repeat(2, 1fr); } }
+  .stat-box{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 14px;
+  }
+  .stat-value{
+    font-family: var(--font-num);
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label{ font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  /* ---------------- KPI CARD ---------------- */
+  .kpi-card{
+    padding: 20px 22px;
+    margin-bottom: 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .kpi-left .kpi-title{ font-size: 12.5px; color: var(--text-2); margin-bottom: 6px; }
+  .kpi-left .kpi-value{
+    font-family: var(--font-num);
+    font-size: 34px;
+    font-weight: 700;
+  }
+  .kpi-left .kpi-target{ font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .kpi-value.good{ color: var(--green); }
+  .kpi-value.bad{ color: var(--red); }
+  .kpi-right{
+    text-align:right;
+    font-size: 13px;
+    max-width: 220px;
+  }
+  .kpi-pill{
+    display:inline-block;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 12.5px;
+    font-weight:600;
+  }
+  .kpi-pill.good{ background: var(--green-soft); color: var(--green); }
+  .kpi-pill.bad{ background: var(--red-soft); color: var(--red); }
+  .kpi-need-text{ margin-top: 8px; color: var(--text-2); }
+
+  /* ---------------- PACE ---------------- */
+  .pace-card{
+    padding: 18px 22px;
+    margin-bottom: 16px;
+    display:flex;
+    justify-content:space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .pace-col{ min-width: 140px; }
+  .pace-label{ font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+  .pace-value{
+    font-family: var(--font-num);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  /* ---------------- STATUS BANNER ---------------- */
+  .status-banner{
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    display:flex;
+    align-items:center;
+    gap: 16px;
+  }
+  .status-emoji{ font-size: 30px; line-height:1; flex-shrink:0; }
+  .status-title{ font-size: 15px; font-weight:700; }
+  .status-sub{ font-size: 13px; color: var(--text-2); margin-top: 2px; }
+  .status-banner.good{ border-color: var(--green-border); background: linear-gradient(180deg, var(--green-soft), transparent); }
+  .status-banner.bad{ border-color: var(--red-border); background: linear-gradient(180deg, var(--red-soft), transparent); }
+  .status-banner.done{ border-color: var(--green-border); background: linear-gradient(180deg, var(--green-soft), transparent); }
+
+  /* ---------------- UNDO ---------------- */
+  .undo-row{ display:flex; justify-content:center; margin-bottom: 10px; }
+  .btn-undo{
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    padding: 9px 16px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+    cursor:pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .btn-undo:hover:not(:disabled){ border-color: var(--text-3); color: var(--text-1); }
+  .btn-undo:disabled{ opacity: 0.4; cursor: default; }
+
+  /* ---------------- HISTORY TABLE ---------------- */
+  .table-card{ padding: 6px; overflow:hidden; }
+  table{ width:100%; border-collapse: collapse; }
+  thead th{
+    text-align:left;
+    font-size: 11.5px;
+    text-transform: none;
+    color: var(--text-2);
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td{
+    padding: 13px 16px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--border-soft);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+  }
+  tbody td.date-cell{ font-family: var(--font-ui); }
+  tbody tr:last-child td{ border-bottom:none; }
+  .kpi-cell.good{ color: var(--green); font-weight:600; }
+  .kpi-cell.bad{ color: var(--red); font-weight:600; }
+  .empty-state{ padding: 40px 20px; text-align:center; color: var(--text-2); font-size: 14px; }
+
+  /* ---------------- SETTINGS ---------------- */
+  .settings-card{ padding: 22px; margin-bottom: 16px; }
+  .field{ margin-bottom: 18px; }
+  .field label{ display:block; font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+  .field input, .field select{
+    width:100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-1);
+    padding: 11px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+  }
+  .btn-save{
+    background: var(--green);
+    color: #05231a;
+    border:none;
+    font-weight: 700;
+    padding: 11px 22px;
+    border-radius: var(--radius-sm);
+    cursor:pointer;
+    font-size: 14px;
+    transition: filter .15s ease;
+  }
+  .btn-save:hover{ filter: brightness(1.08); }
+  .settings-danger{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn-danger{
+    background: transparent;
+    border: 1px solid var(--red-border);
+    color: var(--red);
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    cursor:pointer;
+    font-size: 13px;
+  }
+  .btn-danger:hover{ background: var(--red-soft); }
+  .settings-danger-text{ font-size: 12.5px; color: var(--text-2); max-width: 380px; }
+
+  /* ---------------- TOAST ---------------- */
+  #toast-container{
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    display:flex;
+    flex-direction:column;
+    gap: 8px;
+    z-index: 999;
+    align-items:center;
+  }
+  .toast{
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-1);
+    padding: 10px 18px;
+    border-radius: var(--radius-pill);
+    font-size: 13.5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    animation: toast-in .2s ease, toast-out .25s ease 1.9s forwards;
+    display:flex; align-items:center; gap:8px;
+  }
+  .toast .dot{ width:7px; height:7px; border-radius:50%; }
+  .toast.green .dot{ background: var(--green); }
+  .toast.red .dot{ background: var(--red); }
+  .toast.neutral .dot{ background: var(--text-3); }
+  @keyframes toast-in{ from{ opacity:0; transform: translateY(8px); } to{ opacity:1; transform:none; } }
+  @keyframes toast-out{ to{ opacity:0; transform: translateY(-6px); } }
+
+</style>
+</head>
+<body>
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <nav class="sidebar">
+    <div class="brand"><span class="brand-dot"></span><span class="brand-text">Talk Track</span></div>
+
+    <div class="nav">
+      <button class="nav-item active" data-view="today">
+        <span class="nav-icon">🏠</span><span class="nav-label">Сегодня</span>
+      </button>
+      <button class="nav-item" data-view="history">
+        <span class="nav-icon">📊</span><span class="nav-label">История</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙</span><span class="nav-label">Настройки</span>
+      </button>
+    </div>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sidebarName">Сотрудник</div>
+      <div class="sidebar-user-goal" id="sidebarGoal">Цель: 40 озвучек</div>
+      <button class="sidebar-user-edit" data-view="settings">Изменить</button>
+    </div>
+  </nav>
+
+  <!-- ============================ MAIN ============================ -->
+  <main class="main">
+
+    <!-- ---------------- VIEW: TODAY ---------------- -->
+    <section class="view active" id="view-today">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Сегодня</div>
+          <div class="page-date" id="todayDate">—</div>
+        </div>
+        <div class="page-clock" id="clock">--:--:--</div>
+      </div>
+
+      <!-- Hero: daily goal progress -->
+      <div class="card hero">
+        <div class="hero-label">ОЗВУЧКИ ЗА СЕГОДНЯ</div>
+        <div class="hero-number"><span id="heroOffers">0</span><small>из <span id="heroTarget">40</span></small></div>
+        <div class="hero-bar-track"><div class="hero-bar-fill" id="heroBarFill" style="width:0%"></div></div>
+        <div class="hero-footer">
+          <span><span class="hero-percent" id="heroPercent">0%</span> <span class="hero-percent-label">выполнение дневной цели</span></span>
+          <span class="hero-percent-label" id="heroRemaining">осталось 40</span>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="actions">
+        <button class="btn-action btn-offer" id="btnOffer">
+          <span class="glyph">✓</span>
+          <span class="main-text">ОЗВУЧКА</span>
+          <span class="sub-text">Была озвучка</span>
+        </button>
+        <button class="btn-action btn-no-offer" id="btnNoOffer">
+          <span class="glyph">×</span>
+          <span class="main-text">БЕЗ ОЗВУЧКИ</span>
+          <span class="sub-text">Не было озвучки</span>
+        </button>
+      </div>
+      <div class="hint-row">
+        <span><span class="kbd">Space</span> — озвучка</span>
+        <span><span class="kbd">N</span> — без озвучки</span>
+      </div>
+
+      <div class="undo-row">
+        <button class="btn-undo" id="btnUndo">↶ Отменить последний клик</button>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-value" id="statCalls">0</div><div class="stat-label">Звонков</div></div>
+        <div class="stat-box"><div class="stat-value" id="statOffers">0</div><div class="stat-label">Озвучек</div></div>
+        <div class="stat-box"><div class="stat-value" id="statToGoal">40</div><div class="stat-label">До цели</div></div>
+        <div class="stat-box"><div class="stat-value" id="statGoalPct">0%</div><div class="stat-label">Выполнение цели</div></div>
+      </div>
+
+      <!-- KPI card -->
+      <div class="card kpi-card">
+        <div class="kpi-left">
+          <div class="kpi-title">KPI ОЗВУЧКИ</div>
+          <div class="kpi-value" id="kpiValue">0%</div>
+          <div class="kpi-target">Цель KPI: 40%</div>
+        </div>
+        <div class="kpi-right">
+          <span class="kpi-pill" id="kpiPill">До KPI 40% не хватает</span>
+          <div class="kpi-need-text" id="kpiNeedText"></div>
+        </div>
+      </div>
+
+      <!-- Pace card -->
+      <div class="card pace-card">
+        <div class="pace-col">
+          <div class="pace-label">Текущий темп</div>
+          <div class="pace-value" id="paceCurrent">0 озвучек/ч</div>
+        </div>
+        <div class="pace-col">
+          <div class="pace-label">Для выполнения дневной цели</div>
+          <div class="pace-value" id="paceNeeded">0 озвучек/ч</div>
+        </div>
+      </div>
+
+      <!-- Status banner -->
+      <div class="card status-banner" id="statusBanner">
+        <div class="status-emoji" id="statusEmoji">🔴</div>
+        <div>
+          <div class="status-title" id="statusTitle">Вы ниже цели</div>
+          <div class="status-sub" id="statusSub">Сделайте первый звонок, чтобы увидеть прогресс</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- VIEW: HISTORY ---------------- -->
+    <section class="view" id="view-history">
+      <div class="page-header">
+        <div>
+          <div class="page-title">История</div>
+          <div class="page-date">Статистика по дням</div>
+        </div>
+      </div>
+      <div class="card table-card">
+        <table>
+          <thead>
+            <tr><th>Дата</th><th>Звонки</th><th>Озвучки</th><th>KPI</th></tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+        <div class="empty-state" id="historyEmpty" style="display:none;">Пока нет данных. Начните отмечать звонки на вкладке «Сегодня».</div>
+      </div>
+    </section>
+
+    <!-- ---------------- VIEW: SETTINGS ---------------- -->
+    <section class="view" id="view-settings">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Настройки</div>
+          <div class="page-date">Имя и дневная цель хранятся локально в браузере</div>
+        </div>
+      </div>
+
+      <div class="card settings-card">
+        <div class="field">
+          <label for="inputName">Имя сотрудника</label>
+          <input type="text" id="inputName" placeholder="Например, Алексей">
+        </div>
+        <div class="field">
+          <label for="inputTarget">Дневная цель по озвучкам</label>
+          <input type="number" id="inputTarget" min="1" step="1" placeholder="40">
+        </div>
+        <button class="btn-save" id="btnSaveSettings">Сохранить</button>
+      </div>
+
+      <div class="card settings-card">
+        <div class="settings-danger">
+          <div class="settings-danger-text">Полностью удалить все сохранённые данные (сегодняшнюю статистику и всю историю). Действие необратимо — используйте для чистого теста.</div>
+          <button class="btn-danger" id="btnClearData">Очистить все данные</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast-container"></div>
+
+<script>
+/* ===========================================================
+   ХРАНЕНИЕ ДАННЫХ (localStorage)
+   =========================================================== */
+const STORAGE_KEY = 'talktrack_data';
+const KPI_TARGET_PERCENT = 40;   // порог KPI
+const WORKDAY_HOURS = 8;         // условная длина рабочего дня для расчёта требуемого темпа
+
+function defaultData(){
+  return { name: 'Сотрудник', target: 40, clicks: [] };
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultData();
+    const parsed = JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.clicks)) return defaultData();
+    return {
+      name: parsed.name || 'Сотрудник',
+      target: Number(parsed.target) > 0 ? Number(parsed.target) : 40,
+      clicks: parsed.clicks
+    };
+  }catch(e){
+    console.error('Ошибка чтения localStorage, использую значения по умолчанию', e);
+    return defaultData();
+  }
+}
+
+function saveData(data){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){
+    console.error('Не удалось сохранить данные', e);
+    showToast('Не удалось сохранить данные', 'red');
+  }
+}
+
+let appData = loadData();
+
+/* ===========================================================
+   УТИЛИТЫ ДАТ/ВРЕМЕНИ
+   =========================================================== */
+function todayKey(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateRu(dayKey){
+  const [y,m,d] = dayKey.split('-');
+  const date = new Date(Number(y), Number(m)-1, Number(d));
+  const weekdays = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+  const wd = weekdays[date.getDay()];
+  return `${wd.charAt(0).toUpperCase()+wd.slice(1)}, ${d}.${m}.${y}`;
+}
+
+function formatDateShort(dayKey){
+  const [y,m,d] = dayKey.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+/* ===========================================================
+   ОСНОВНАЯ ЛОГИКА РАСЧЁТОВ
+   Критически важно: не смешивать выполнение дневной цели и KPI.
+   =========================================================== */
+
+// Выполнение дневной цели = озвучки / дневная цель * 100
+function calculateDailyGoalProgress(offers, target){
+  if(!target || target <= 0) return 0;
+  return (offers / target) * 100;
+}
+
+// KPI озвучки = озвучки / звонки * 100
+function calculateKPI(offers, calls){
+  if(!calls || calls <= 0) return 0;
+  return (offers / calls) * 100;
+}
+
+// Сколько ещё озвучек нужно сделать (не меняя число звонков "задним числом"),
+// чтобы соотношение офферов к звонкам достигло kpiTargetPercent.
+// Логика: если бы к текущим calls добавили needed офферов (без новых звонков),
+// то (offers+needed)/calls*100 >= kpiTargetPercent.
+function calculateNeededOffersForKPI(calls, offers, kpiTargetPercent = KPI_TARGET_PERCENT){
+  if(!calls || calls <= 0) return 0;
+  const currentKPI = calculateKPI(offers, calls);
+  if(currentKPI >= kpiTargetPercent) return 0;
+  const requiredOffers = Math.ceil((calls * kpiTargetPercent) / 100);
+  return Math.max(0, requiredOffers - offers);
+}
+
+function getTodayClicks(){
+  const key = todayKey();
+  return appData.clicks.filter(c => c.day === key);
+}
+
+function getDayStats(clicksForDay){
+  const calls = clicksForDay.length;
+  const offers = clicksForDay.filter(c => c.offer).length;
+  return { calls, offers, kpi: calculateKPI(offers, calls) };
+}
+
+// Темп: офферы в час с момента первого клика сегодня
+function calculateCurrentPace(clicksToday){
+  if(clicksToday.length === 0) return 0;
+  const firstTs = Math.min(...clicksToday.map(c => c.timestamp));
+  const offers = clicksToday.filter(c => c.offer).length;
+  const hoursElapsed = Math.max((Date.now() - firstTs) / (1000*60*60), 1/60); // минимум ~1 минута, чтобы не делить на 0
+  return offers / hoursElapsed;
+}
+
+// Требуемый темп для выполнения дневной цели в рамках условного рабочего дня
+function calculateRequiredPace(target){
+  return target / WORKDAY_HOURS;
+}
+
+/* ===========================================================
+   ДЕЙСТВИЯ
+   =========================================================== */
+function addClick(offer){
+  appData.clicks.push({ day: todayKey(), timestamp: Date.now(), offer: offer });
+  saveData(appData);
+  showToast(offer ? 'Озвучка добавлена' : 'Зафиксировано: без озвучки', offer ? 'green' : 'red');
+  renderToday();
+  renderHistory();
+}
+
+function undoLast(){
+  const key = todayKey();
+  if(appData.clicks.length === 0 || appData.clicks[appData.clicks.length - 1].day !== key){
+    showToast('Нет действий за сегодня для отмены', 'neutral');
+    return;
+  }
+  appData.clicks.pop();
+  saveData(appData);
+  showToast('Последний клик отменён', 'neutral');
+  renderToday();
+  renderHistory();
+}
+
+function clearAllData(){
+  if(!confirm('Удалить все данные без возможности восстановления?')) return;
+  appData = defaultData();
+  saveData(appData);
+  showToast('Все данные очищены', 'neutral');
+  renderAll();
+}
+
+function saveSettings(){
+  const nameInput = document.getElementById('inputName');
+  const targetInput = document.getElementById('inputTarget');
+  const name = nameInput.value.trim() || 'Сотрудник';
+  let target = parseInt(targetInput.value, 10);
+  if(isNaN(target) || target <= 0) target = 40;
+
+  appData.name = name;
+  appData.target = target;
+  saveData(appData);
+  showToast('Настройки сохранены', 'green');
+  renderAll();
+}
+
+/* ===========================================================
+   TOAST
+   =========================================================== */
+function showToast(text, color = 'neutral'){
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${color}`;
+  toast.innerHTML = `<span class="dot"></span>${text}`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
+}
+
+/* ===========================================================
+   РЕНДЕР: СЕГОДНЯ
+   =========================================================== */
+function renderToday(){
+  const clicksToday = getTodayClicks();
+  const calls = clicksToday.length;
+  const offers = clicksToday.filter(c => c.offer).length;
+  const target = appData.target;
+
+  const goalProgress = calculateDailyGoalProgress(offers, target);
+  const kpi = calculateKPI(offers, calls);
+  const needed = calculateNeededOffersForKPI(calls, offers);
+
+  // Дата и часы
+  document.getElementById('todayDate').textContent = formatDateRu(todayKey());
+
+  // Hero — выполнение дневной цели
+  document.getElementById('heroOffers').textContent = offers;
+  document.getElementById('heroTarget').textContent = target;
+  const barWidth = Math.min(goalProgress, 100);
+  const barFill = document.getElementById('heroBarFill');
+  barFill.style.width = barWidth + '%';
+  barFill.classList.toggle('over', goalProgress >= 100);
+  document.getElementById('heroPercent').textContent = formatPercent(goalProgress);
+  const remaining = Math.max(target - offers, 0);
+  document.getElementById('heroRemaining').textContent = remaining === 0
+    ? 'цель выполнена'
+    : `осталось ${remaining}`;
+
+  // Кнопки действий (доступность на всякий случай)
+  // без изменений — активны всегда
+
+  // Undo
+  const key = todayKey();
+  const canUndo = appData.clicks.length > 0 && appData.clicks[appData.clicks.length - 1].day === key;
+  document.getElementById('btnUndo').disabled = !canUndo;
+
+  // Статистика
+  document.getElementById('statCalls').textContent = calls;
+  document.getElementById('statOffers').textContent = offers;
+  document.getElementById('statToGoal').textContent = remaining;
+  document.getElementById('statGoalPct').textContent = formatPercent(goalProgress);
+
+  // KPI карточка
+  const kpiValueEl = document.getElementById('kpiValue');
+  kpiValueEl.textContent = formatPercent(kpi);
+  kpiValueEl.classList.toggle('good', kpi >= KPI_TARGET_PERCENT);
+  kpiValueEl.classList.toggle('bad', kpi < KPI_TARGET_PERCENT);
+
+  const kpiPill = document.getElementById('kpiPill');
+  const kpiNeedText = document.getElementById('kpiNeedText');
+  if(calls === 0){
+    kpiPill.textContent = 'Ещё нет звонков';
+    kpiPill.className = 'kpi-pill';
+    kpiNeedText.textContent = '';
+  } else if(kpi >= KPI_TARGET_PERCENT){
+    kpiPill.textContent = `✓ KPI ${KPI_TARGET_PERCENT}% выполнен`;
+    kpiPill.className = 'kpi-pill good';
+    kpiNeedText.textContent = '';
+  } else {
+    kpiPill.textContent = `До KPI ${KPI_TARGET_PERCENT}% не хватает`;
+    kpiPill.className = 'kpi-pill bad';
+    kpiNeedText.textContent = `Нужно ещё ${needed} ${pluralizeOffers(needed)}`;
+  }
+
+  // Темп
+  const currentPace = calculateCurrentPace(clicksToday);
+  const requiredPace = calculateRequiredPace(target);
+  document.getElementById('paceCurrent').textContent = `${currentPace.toFixed(1)} озвучки/ч`;
+  document.getElementById('paceNeeded').textContent = `${requiredPace.toFixed(1)} озвучки/ч`;
+
+  // Статус
+  renderStatus(calls, offers, target, kpi, needed, goalProgress);
+}
+
+function renderStatus(calls, offers, target, kpi, needed, goalProgress){
+  const banner = document.getElementById('statusBanner');
+  const emoji = document.getElementById('statusEmoji');
+  const title = document.getElementById('statusTitle');
+  const sub = document.getElementById('statusSub');
+
+  banner.classList.remove('good','bad','done');
+
+  if(calls === 0){
+    emoji.textContent = '⚪';
+    title.textContent = 'Начните смену';
+    sub.textContent = 'Сделайте первый звонок, чтобы увидеть прогресс';
+    return;
+  }
+
+  if(goalProgress >= 100){
+    banner.classList.add('done');
+    emoji.textContent = '🔥';
+    title.textContent = 'Дневная цель выполнена!';
+    sub.textContent = `${offers} из ${target} озвучек — отличная работа`;
+    return;
+  }
+
+  if(kpi >= KPI_TARGET_PERCENT){
+    banner.classList.add('good');
+    emoji.textContent = '🟢';
+    title.textContent = 'Вы идёте по плану';
+    sub.textContent = 'Держите темп!';
+  } else {
+    banner.classList.add('bad');
+    emoji.textContent = '🔴';
+    title.textContent = 'Вы ниже цели';
+    sub.textContent = `До ${KPI_TARGET_PERCENT}% не хватает ${needed} ${pluralizeOffers(needed)}`;
+  }
+}
+
+function pluralizeOffers(n){
+  const mod10 = n % 10, mod100 = n % 100;
+  if(mod10 === 1 && mod100 !== 11) return 'озвучки';
+  if([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return 'озвучек';
+  return 'озвучек';
+}
+
+function formatPercent(value){
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded}%`;
+}
+
+/* ===========================================================
+   РЕНДЕР: ИСТОРИЯ
+   =========================================================== */
+function renderHistory(){
+  const byDay = {};
+  appData.clicks.forEach(c => {
+    if(!byDay[c.day]) byDay[c.day] = [];
+    byDay[c.day].push(c);
+  });
+
+  const days = Object.keys(byDay).sort((a,b) => b.localeCompare(a)); // новые сверху
+
+  const tbody = document.getElementById('historyBody');
+  const empty = document.getElementById('historyEmpty');
+  tbody.innerHTML = '';
+
+  if(days.length === 0){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  days.forEach(day => {
+    const stats = getDayStats(byDay[day]);
+    const tr = document.createElement('tr');
+    const kpiClass = stats.kpi >= KPI_TARGET_PERCENT ? 'good' : 'bad';
+    tr.innerHTML = `
+      <td class="date-cell">${formatDateShort(day)}</td>
+      <td>${stats.calls}</td>
+      <td>${stats.offers}</td>
+      <td class="kpi-cell ${kpiClass}">${formatPercent(stats.kpi)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ===========================================================
+   РЕНДЕР: НАСТРОЙКИ + SIDEBAR
+   =========================================================== */
+function renderSettings(){
+  document.getElementById('inputName').value = appData.name;
+  document.getElementById('inputTarget').value = appData.target;
+}
+
+function renderSidebar(){
+  document.getElementById('sidebarName').textContent = appData.name;
+  document.getElementById('sidebarGoal').textContent = `Цель: ${appData.target} озвучек`;
+}
+
+function renderAll(){
+  renderToday();
+  renderHistory();
+  renderSettings();
+  renderSidebar();
+}
+
+/* ===========================================================
+   НАВИГАЦИЯ
+   =========================================================== */
+function switchView(viewName){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${viewName}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.view === viewName);
+  });
+}
+
+document.querySelectorAll('[data-view]').forEach(el => {
+  el.addEventListener('click', () => switchView(el.dataset.view));
+});
+
+/* ===========================================================
+   ЧАСЫ
+   =========================================================== */
+function tickClock(){
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// Автоматическая проверка смены дня (например, если приложение открыто всю ночь)
+let lastKnownDay = todayKey();
+setInterval(() => {
+  const current = todayKey();
+  if(current !== lastKnownDay){
+    lastKnownDay = current;
+    renderAll();
+  }
+}, 30000);
+
+/* ===========================================================
+   ОБРАБОТЧИКИ КНОПОК
+   =========================================================== */
+document.getElementById('btnOffer').addEventListener('click', () => addClick(true));
+document.getElementById('btnNoOffer').addEventListener('click', () => addClick(false));
+document.getElementById('btnUndo').addEventListener('click', undoLast);
+document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
+document.getElementById('btnClearData').addEventListener('click', clearAllData);
+
+/* ===========================================================
+   ГОРЯЧИЕ КЛАВИШИ
+   =========================================================== */
+document.addEventListener('keydown', (e) => {
+  const tag = document.activeElement.tagName;
+  const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  if(isTyping) return;
+
+  if(e.code === 'Space'){
+    e.preventDefault();
+    addClick(true);
+  } else if(e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т'){
+    // 'т' — та же клавиша, что 'n', в русской раскладке
+    addClick(false);
+  }
+});
+
+/* ===========================================================
+   АРХИТЕКТУРНЫЙ ЗАДЕЛ ПОД БУДУЩИЙ КОМПАКТНЫЙ РЕЖИМ (мини-кликер)
+   Все данные и расчёты уже вынесены в чистые функции
+   (calculateDailyGoalProgress, calculateKPI, calculateNeededOffersForKPI,
+   calculateCurrentPace), поэтому компактный виджет сможет переиспользовать
+   их напрямую и рендерить только свой собственный, урезанный DOM.
+   =========================================================== */
+
+/* ===========================================================
+   ИНИЦИАЛИЗАЦИЯ
+   =========================================================== */
+renderAll();
+</script>
+</body>
+</html>
