@@ -32,6 +32,10 @@
     --red-soft: rgba(244,104,95,0.12);
     --red-border: rgba(244,104,95,0.35);
 
+    --amber: #e8b34f;
+    --amber-soft: rgba(232,179,79,0.12);
+    --amber-border: rgba(232,179,79,0.35);
+
     --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-num: "SF Mono", "JetBrains Mono", "Cascadia Mono", ui-monospace, Consolas, monospace;
 
@@ -167,6 +171,11 @@
     color: var(--text-2);
     font-variant-numeric: tabular-nums;
   }
+  .section-title{
+    font-size: 14px;
+    font-weight: 700;
+    margin: 26px 0 12px 2px;
+  }
 
   /* ---------------- HERO CARD ---------------- */
   .card{
@@ -280,11 +289,12 @@
   /* ---------------- STATS GRID ---------------- */
   .stats-grid{
     display:grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 10px;
     margin-bottom: 16px;
   }
-  @media (max-width: 620px){ .stats-grid{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 720px){ .stats-grid{ grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 460px){ .stats-grid{ grid-template-columns: repeat(2, 1fr); } }
   .stat-box{
     background: var(--surface);
     border: 1px solid var(--border);
@@ -334,6 +344,43 @@
   .kpi-pill.bad{ background: var(--red-soft); color: var(--red); }
   .kpi-need-text{ margin-top: 8px; color: var(--text-2); }
 
+  /* ---------------- REASONS BLOCK ---------------- */
+  .reasons-card{ padding: 20px 22px; margin-bottom: 16px; }
+  .reasons-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom: 14px;
+  }
+  .reasons-header .section-title{ margin:0; }
+  .reasons-total{ font-size: 12.5px; color: var(--text-2); }
+  .reason-row{ margin-bottom: 14px; }
+  .reason-row:last-child{ margin-bottom: 0; }
+  .reason-row-top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom: 6px;
+  }
+  .reason-name{ font-size: 13.5px; color: var(--text-1); }
+  .reason-numbers{ display:flex; align-items:baseline; gap:8px; }
+  .reason-count{ font-family: var(--font-num); font-size: 18px; font-weight:700; }
+  .reason-pct{ font-family: var(--font-num); font-size: 12.5px; color: var(--text-2); }
+  .reason-bar-track{
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-3);
+    overflow:hidden;
+    border: 1px solid var(--border-soft);
+  }
+  .reason-bar-fill{
+    height:100%;
+    border-radius: var(--radius-pill);
+    background: var(--red);
+    transition: width .4s ease;
+  }
+  .reasons-empty{ font-size: 13px; color: var(--text-2); text-align:center; padding: 6px 0; }
+
   /* ---------------- PACE ---------------- */
   .pace-card{
     padding: 18px 22px;
@@ -381,8 +428,9 @@
   .btn-undo:hover:not(:disabled){ border-color: var(--text-3); color: var(--text-1); }
   .btn-undo:disabled{ opacity: 0.4; cursor: default; }
 
-  /* ---------------- HISTORY TABLE ---------------- */
+  /* ---------------- TABLES (history) ---------------- */
   .table-card{ padding: 6px; overflow:hidden; }
+  .table-scroll{ overflow-x:auto; }
   table{ width:100%; border-collapse: collapse; }
   thead th{
     text-align:left;
@@ -392,6 +440,7 @@
     font-weight: 600;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
+    white-space: nowrap;
   }
   tbody td{
     padding: 13px 16px;
@@ -399,11 +448,14 @@
     border-bottom: 1px solid var(--border-soft);
     font-family: var(--font-num);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
-  tbody td.date-cell{ font-family: var(--font-ui); }
+  tbody td.date-cell, tbody td.reason-cell, tbody td.result-cell{ font-family: var(--font-ui); }
   tbody tr:last-child td{ border-bottom:none; }
   .kpi-cell.good{ color: var(--green); font-weight:600; }
   .kpi-cell.bad{ color: var(--red); font-weight:600; }
+  .result-cell.is-offer{ color: var(--green); }
+  .result-cell.is-no-offer{ color: var(--red); }
   .empty-state{ padding: 40px 20px; text-align:center; color: var(--text-2); font-size: 14px; }
 
   /* ---------------- SETTINGS ---------------- */
@@ -479,6 +531,67 @@
   .toast.neutral .dot{ background: var(--text-3); }
   @keyframes toast-in{ from{ opacity:0; transform: translateY(8px); } to{ opacity:1; transform:none; } }
   @keyframes toast-out{ to{ opacity:0; transform: translateY(-6px); } }
+
+  /* ---------------- REASON MODAL ---------------- */
+  .modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(3,5,10,0.7);
+    backdrop-filter: blur(2px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .modal-overlay.open{ display:flex; animation: overlay-in .15s ease; }
+  @keyframes overlay-in{ from{ opacity:0; } to{ opacity:1; } }
+  .modal-box{
+    width: 100%;
+    max-width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    animation: modal-in .18s cubic-bezier(.2,.7,.3,1);
+  }
+  @keyframes modal-in{ from{ opacity:0; transform: translateY(10px) scale(0.98); } to{ opacity:1; transform:none; } }
+  .modal-title{ font-size: 16px; font-weight:700; margin-bottom: 4px; }
+  .modal-sub{ font-size: 12.5px; color: var(--text-2); margin-bottom: 18px; }
+  .reason-options{ display:flex; flex-direction:column; gap: 10px; }
+  .reason-option{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 15px 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor:pointer;
+    color: var(--text-1);
+    font-size: 14.5px;
+    font-weight:600;
+    transition: transform .08s ease, border-color .15s ease, background .15s ease;
+    text-align:left;
+  }
+  .reason-option:hover{ border-color: var(--red-border); background: var(--red-soft); }
+  .reason-option:active{ transform: scale(0.98); }
+  .reason-option .glyph{ font-size: 18px; width: 22px; text-align:center; flex-shrink:0; }
+  .reason-option .key-hint{
+    margin-left:auto;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--text-3);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 6px;
+  }
+  .modal-cancel-hint{
+    text-align:center;
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: var(--text-3);
+  }
 
 </style>
 </head>
@@ -559,6 +672,7 @@
       <div class="stats-grid">
         <div class="stat-box"><div class="stat-value" id="statCalls">0</div><div class="stat-label">Звонков</div></div>
         <div class="stat-box"><div class="stat-value" id="statOffers">0</div><div class="stat-label">Озвучек</div></div>
+        <div class="stat-box"><div class="stat-value" id="statNoOffers">0</div><div class="stat-label">Без озвучки</div></div>
         <div class="stat-box"><div class="stat-value" id="statToGoal">40</div><div class="stat-label">До цели</div></div>
         <div class="stat-box"><div class="stat-value" id="statGoalPct">0%</div><div class="stat-label">Выполнение цели</div></div>
       </div>
@@ -574,6 +688,15 @@
           <span class="kpi-pill" id="kpiPill">До KPI 40% не хватает</span>
           <div class="kpi-need-text" id="kpiNeedText"></div>
         </div>
+      </div>
+
+      <!-- Reasons for no offer -->
+      <div class="card reasons-card">
+        <div class="reasons-header">
+          <div class="section-title">Причины отсутствия озвучки</div>
+          <div class="reasons-total" id="reasonsTotal">Без озвучки: 0</div>
+        </div>
+        <div id="reasonsList"></div>
       </div>
 
       <!-- Pace card -->
@@ -606,14 +729,38 @@
           <div class="page-date">Статистика по дням</div>
         </div>
       </div>
+
+      <!-- Сводная статистика причин за всё время — чтобы не считать вручную по дням -->
+      <div class="card reasons-card">
+        <div class="reasons-header">
+          <div class="section-title">Сводная статистика причин</div>
+          <div class="reasons-total" id="reasonsSummaryTotal">Без озвучки: 0</div>
+        </div>
+        <div id="reasonsSummaryList"></div>
+      </div>
+
+      <div class="section-title">Статистика по дням</div>
+      <div class="card table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr id="historyTableHead"></tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="historyEmpty" style="display:none;">Пока нет данных. Начните отмечать звонки на вкладке «Сегодня».</div>
+      </div>
+
+      <div class="section-title">Звонки за сегодня</div>
       <div class="card table-card">
         <table>
           <thead>
-            <tr><th>Дата</th><th>Звонки</th><th>Озвучки</th><th>KPI</th></tr>
+            <tr><th>Время</th><th>Результат</th><th>Причина</th></tr>
           </thead>
-          <tbody id="historyBody"></tbody>
+          <tbody id="todayLogBody"></tbody>
         </table>
-        <div class="empty-state" id="historyEmpty" style="display:none;">Пока нет данных. Начните отмечать звонки на вкладке «Сегодня».</div>
+        <div class="empty-state" id="todayLogEmpty" style="display:none;">Сегодня пока нет звонков.</div>
       </div>
     </section>
 
@@ -648,9 +795,38 @@
 
   </main>
 
+  <!-- ============================ REASON MODAL ============================ -->
+  <div class="modal-overlay" id="reasonModal">
+    <div class="modal-box">
+      <div class="modal-title">Почему не было озвучки?</div>
+      <div class="modal-sub">Выберите одну причину — звонок сохранится сразу после выбора</div>
+      <div class="reason-options" id="reasonOptions"></div>
+      <div class="modal-cancel-hint">Esc — закрыть без сохранения</div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
 
 <script>
+/* ===========================================================
+   СПИСОК ПРИЧИН «НЕТ ОЗВУЧКИ»
+   Единственное место, где определены причины. Вся аналитика
+   (модалка, блок статистики, история) строится из этого массива,
+   поэтому добавление новой причины не требует правок в остальном коде.
+   =========================================================== */
+const NO_OFFER_REASONS = [
+  { id: 'negative',    label: 'Негатив',        glyph: '🔴', key: '1' },
+  { id: 'transfer',    label: 'Трансфер',       glyph: '🔄', key: '2' },
+  { id: 'no_proposal', label: 'Нет предложения', glyph: '⚪', key: '3' },
+  { id: 'call_dropped', label: 'Срыв звонка',   glyph: '📵', key: '4' },
+  { id: 'my_fault',    label: 'Не озвучил, потому что я 💩', glyph: '💩', key: '5' }
+];
+
+function reasonLabelById(id){
+  const r = NO_OFFER_REASONS.find(r => r.id === id);
+  return r ? r.label : '—';
+}
+
 /* ===========================================================
    ХРАНЕНИЕ ДАННЫХ (localStorage)
    =========================================================== */
@@ -662,6 +838,34 @@ function defaultData(){
   return { name: 'Сотрудник', target: 40, clicks: [] };
 }
 
+function generateId(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+// Приводит одну запись (в т.ч. записи старого формата с полем `offer`)
+// к актуальной структуре { id, day, timestamp, result, noOfferReason }.
+function migrateClick(raw){
+  if(raw && typeof raw.result === 'string'){
+    // Уже новый формат — только гарантируем наличие всех полей.
+    return {
+      id: raw.id || generateId(),
+      day: raw.day,
+      timestamp: raw.timestamp,
+      result: raw.result === 'offer' ? 'offer' : 'no_offer',
+      noOfferReason: raw.result === 'offer' ? null : (raw.noOfferReason || null)
+    };
+  }
+  // Старый формат: { day, timestamp, offer: true|false }
+  return {
+    id: generateId(),
+    day: raw.day,
+    timestamp: raw.timestamp,
+    result: raw.offer ? 'offer' : 'no_offer',
+    noOfferReason: null
+  };
+}
+
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -671,7 +875,7 @@ function loadData(){
     return {
       name: parsed.name || 'Сотрудник',
       target: Number(parsed.target) > 0 ? Number(parsed.target) : 40,
-      clicks: parsed.clicks
+      clicks: parsed.clicks.map(migrateClick)
     };
   }catch(e){
     console.error('Ошибка чтения localStorage, использую значения по умолчанию', e);
@@ -714,9 +918,17 @@ function formatDateShort(dayKey){
   return `${d}.${m}.${y}`;
 }
 
+function formatTime(timestamp){
+  const d = new Date(timestamp);
+  const h = String(d.getHours()).padStart(2,'0');
+  const m = String(d.getMinutes()).padStart(2,'0');
+  return `${h}:${m}`;
+}
+
 /* ===========================================================
    ОСНОВНАЯ ЛОГИКА РАСЧЁТОВ
-   Критически важно: не смешивать выполнение дневной цели и KPI.
+   Критически важно: не смешивать выполнение дневной цели, KPI
+   и статистику причин — три независимые функции, три ответственности.
    =========================================================== */
 
 // Выполнение дневной цели = озвучки / дневная цель * 100
@@ -731,16 +943,25 @@ function calculateKPI(offers, calls){
   return (offers / calls) * 100;
 }
 
-// Сколько ещё озвучек нужно сделать (не меняя число звонков "задним числом"),
-// чтобы соотношение офферов к звонкам достигло kpiTargetPercent.
-// Логика: если бы к текущим calls добавили needed офферов (без новых звонков),
-// то (offers+needed)/calls*100 >= kpiTargetPercent.
+// Сколько ещё озвучек нужно (без учёта причин), чтобы KPI достиг целевого значения
 function calculateNeededOffersForKPI(calls, offers, kpiTargetPercent = KPI_TARGET_PERCENT){
   if(!calls || calls <= 0) return 0;
   const currentKPI = calculateKPI(offers, calls);
   if(currentKPI >= kpiTargetPercent) return 0;
   const requiredOffers = Math.ceil((calls * kpiTargetPercent) / 100);
   return Math.max(0, requiredOffers - offers);
+}
+
+// Статистика причин "нет озвучки": количество и доля каждой причины
+// среди ВСЕХ звонков без озвучки (а не среди всех звонков вообще).
+function calculateNoOfferReasonStats(clicks){
+  const noOfferClicks = clicks.filter(c => c.result === 'no_offer');
+  const total = noOfferClicks.length;
+  return NO_OFFER_REASONS.map(reason => {
+    const count = noOfferClicks.filter(c => c.noOfferReason === reason.id).length;
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    return { ...reason, count, percentage };
+  });
 }
 
 function getTodayClicks(){
@@ -750,7 +971,7 @@ function getTodayClicks(){
 
 function getDayStats(clicksForDay){
   const calls = clicksForDay.length;
-  const offers = clicksForDay.filter(c => c.offer).length;
+  const offers = clicksForDay.filter(c => c.result === 'offer').length;
   return { calls, offers, kpi: calculateKPI(offers, calls) };
 }
 
@@ -758,8 +979,8 @@ function getDayStats(clicksForDay){
 function calculateCurrentPace(clicksToday){
   if(clicksToday.length === 0) return 0;
   const firstTs = Math.min(...clicksToday.map(c => c.timestamp));
-  const offers = clicksToday.filter(c => c.offer).length;
-  const hoursElapsed = Math.max((Date.now() - firstTs) / (1000*60*60), 1/60); // минимум ~1 минута, чтобы не делить на 0
+  const offers = clicksToday.filter(c => c.result === 'offer').length;
+  const hoursElapsed = Math.max((Date.now() - firstTs) / (1000*60*60), 1/60); // минимум ~1 минута
   return offers / hoursElapsed;
 }
 
@@ -769,14 +990,33 @@ function calculateRequiredPace(target){
 }
 
 /* ===========================================================
-   ДЕЙСТВИЯ
+   ДЕЙСТВИЯ: ЗАПИСЬ ЗВОНКА
    =========================================================== */
-function addClick(offer){
-  appData.clicks.push({ day: todayKey(), timestamp: Date.now(), offer: offer });
+
+// Единая точка сохранения звонка. Для result='no_offer' поле noOfferReason
+// ОБЯЗАТЕЛЬНО (гарантируется вызывающим кодом — см. modal-логику ниже).
+function recordCall(result, noOfferReason = null){
+  appData.clicks.push({
+    id: generateId(),
+    day: todayKey(),
+    timestamp: Date.now(),
+    result,
+    noOfferReason: result === 'offer' ? null : noOfferReason
+  });
   saveData(appData);
-  showToast(offer ? 'Озвучка добавлена' : 'Зафиксировано: без озвучки', offer ? 'green' : 'red');
   renderToday();
   renderHistory();
+}
+
+function handleOfferClick(){
+  recordCall('offer');
+  showToast('Озвучка добавлена', 'green');
+}
+
+function handleNoOfferReasonSelected(reasonId){
+  recordCall('no_offer', reasonId);
+  showToast(`Зафиксировано: без озвучки — ${reasonLabelById(reasonId)}`, 'red');
+  closeReasonModal();
 }
 
 function undoLast(){
@@ -785,7 +1025,7 @@ function undoLast(){
     showToast('Нет действий за сегодня для отмены', 'neutral');
     return;
   }
-  appData.clicks.pop();
+  appData.clicks.pop(); // полностью удаляет запись — включая причину, если она была
   saveData(appData);
   showToast('Последний клик отменён', 'neutral');
   renderToday();
@@ -815,6 +1055,45 @@ function saveSettings(){
 }
 
 /* ===========================================================
+   МОДАЛЬНОЕ ОКНО «ПОЧЕМУ НЕ БЫЛО ОЗВУЧКИ»
+   Открывается ВМЕСТО прямого сохранения при клике «БЕЗ ОЗВУЧКИ».
+   Звонок сохраняется только после выбора причины. Escape закрывает
+   окно без сохранения — звонок в этом случае не засчитывается.
+   =========================================================== */
+let isReasonModalOpen = false;
+
+function buildReasonOptions(){
+  const container = document.getElementById('reasonOptions');
+  container.innerHTML = '';
+  NO_OFFER_REASONS.forEach(reason => {
+    const btn = document.createElement('button');
+    btn.className = 'reason-option';
+    btn.innerHTML = `
+      <span class="glyph">${reason.glyph}</span>
+      <span>${reason.label}</span>
+      <span class="key-hint">${reason.key}</span>
+    `;
+    btn.addEventListener('click', () => handleNoOfferReasonSelected(reason.id));
+    container.appendChild(btn);
+  });
+}
+
+function openReasonModal(){
+  isReasonModalOpen = true;
+  document.getElementById('reasonModal').classList.add('open');
+}
+
+function closeReasonModal(){
+  isReasonModalOpen = false;
+  document.getElementById('reasonModal').classList.remove('open');
+}
+
+document.getElementById('reasonModal').addEventListener('click', (e) => {
+  // Клик по затемнённому фону = отмена без сохранения
+  if(e.target.id === 'reasonModal') closeReasonModal();
+});
+
+/* ===========================================================
    TOAST
    =========================================================== */
 function showToast(text, color = 'neutral'){
@@ -832,7 +1111,8 @@ function showToast(text, color = 'neutral'){
 function renderToday(){
   const clicksToday = getTodayClicks();
   const calls = clicksToday.length;
-  const offers = clicksToday.filter(c => c.offer).length;
+  const offers = clicksToday.filter(c => c.result === 'offer').length;
+  const noOffers = calls - offers;
   const target = appData.target;
 
   const goalProgress = calculateDailyGoalProgress(offers, target);
@@ -855,9 +1135,6 @@ function renderToday(){
     ? 'цель выполнена'
     : `осталось ${remaining}`;
 
-  // Кнопки действий (доступность на всякий случай)
-  // без изменений — активны всегда
-
   // Undo
   const key = todayKey();
   const canUndo = appData.clicks.length > 0 && appData.clicks[appData.clicks.length - 1].day === key;
@@ -866,6 +1143,7 @@ function renderToday(){
   // Статистика
   document.getElementById('statCalls').textContent = calls;
   document.getElementById('statOffers').textContent = offers;
+  document.getElementById('statNoOffers').textContent = noOffers;
   document.getElementById('statToGoal').textContent = remaining;
   document.getElementById('statGoalPct').textContent = formatPercent(goalProgress);
 
@@ -891,6 +1169,9 @@ function renderToday(){
     kpiNeedText.textContent = `Нужно ещё ${needed} ${pluralizeOffers(needed)}`;
   }
 
+  // Причины отсутствия озвучки (за сегодня)
+  renderReasonsBlock('reasonsList', 'reasonsTotal', clicksToday, noOffers);
+
   // Темп
   const currentPace = calculateCurrentPace(clicksToday);
   const requiredPace = calculateRequiredPace(target);
@@ -899,6 +1180,42 @@ function renderToday(){
 
   // Статус
   renderStatus(calls, offers, target, kpi, needed, goalProgress);
+}
+
+// Универсальный рендер блока причин: используется и для карточки "за сегодня",
+// и для сводной статистики "за всё время" на вкладке История — в обоих случаях
+// расчёт идёт через одну и ту же calculateNoOfferReasonStats().
+function renderReasonsBlock(listElId, totalElId, clicks, noOffersTotal){
+  document.getElementById(totalElId).textContent = `Без озвучки: ${noOffersTotal}`;
+  const list = document.getElementById(listElId);
+  list.innerHTML = '';
+
+  if(noOffersTotal === 0){
+    const empty = document.createElement('div');
+    empty.className = 'reasons-empty';
+    empty.textContent = 'Пока нет звонков без озвучки';
+    list.appendChild(empty);
+    return;
+  }
+
+  const stats = calculateNoOfferReasonStats(clicks);
+  stats.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'reason-row';
+    row.innerHTML = `
+      <div class="reason-row-top">
+        <span class="reason-name">${s.label}</span>
+        <span class="reason-numbers">
+          <span class="reason-count">${s.count}</span>
+          <span class="reason-pct">${formatPercent(s.percentage)}</span>
+        </span>
+      </div>
+      <div class="reason-bar-track">
+        <div class="reason-bar-fill" style="width:${Math.min(s.percentage,100)}%"></div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
 }
 
 function renderStatus(calls, offers, target, kpi, needed, goalProgress){
@@ -953,6 +1270,33 @@ function formatPercent(value){
    РЕНДЕР: ИСТОРИЯ
    =========================================================== */
 function renderHistory(){
+  renderReasonsSummary();
+  renderHistorySummary();
+  renderTodayLog();
+}
+
+// Сводная статистика причин за ВСЮ историю (все дни, не только сегодня) —
+// та же самая функция calculateNoOfferReasonStats, просто на полном массиве кликов.
+function renderReasonsSummary(){
+  const allNoOffers = appData.clicks.filter(c => c.result === 'no_offer').length;
+  renderReasonsBlock('reasonsSummaryList', 'reasonsSummaryTotal', appData.clicks, allNoOffers);
+}
+
+// Заголовок таблицы строится динамически из NO_OFFER_REASONS, чтобы при
+// добавлении новой причины в будущем колонка появилась сама, без правок вёрстки.
+function buildHistoryTableHead(){
+  const head = document.getElementById('historyTableHead');
+  const reasonHeaders = NO_OFFER_REASONS.map(r => `<th>${r.label}</th>`).join('');
+  head.innerHTML = `
+    <th>Дата</th><th>Звонки</th><th>Озвучки</th><th>Без озвучки</th>
+    ${reasonHeaders}
+    <th>KPI</th>
+  `;
+}
+
+function renderHistorySummary(){
+  buildHistoryTableHead();
+
   const byDay = {};
   appData.clicks.forEach(c => {
     if(!byDay[c.day]) byDay[c.day] = [];
@@ -972,14 +1316,48 @@ function renderHistory(){
   empty.style.display = 'none';
 
   days.forEach(day => {
-    const stats = getDayStats(byDay[day]);
-    const tr = document.createElement('tr');
+    const dayClicks = byDay[day];
+    const stats = getDayStats(dayClicks);
+    const noOffers = stats.calls - stats.offers;
+    const reasonStats = calculateNoOfferReasonStats(dayClicks);
     const kpiClass = stats.kpi >= KPI_TARGET_PERCENT ? 'good' : 'bad';
+
+    const reasonCells = reasonStats.map(r => `<td>${r.count}</td>`).join('');
+
+    const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="date-cell">${formatDateShort(day)}</td>
       <td>${stats.calls}</td>
       <td>${stats.offers}</td>
+      <td>${noOffers}</td>
+      ${reasonCells}
       <td class="kpi-cell ${kpiClass}">${formatPercent(stats.kpi)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Детализация звонков за сегодня: время, результат, причина
+function renderTodayLog(){
+  const tbody = document.getElementById('todayLogBody');
+  const empty = document.getElementById('todayLogEmpty');
+  tbody.innerHTML = '';
+
+  const clicksToday = getTodayClicks().slice().sort((a,b) => a.timestamp - b.timestamp);
+
+  if(clicksToday.length === 0){
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  clicksToday.forEach(c => {
+    const isOffer = c.result === 'offer';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatTime(c.timestamp)}</td>
+      <td class="result-cell ${isOffer ? 'is-offer' : 'is-no-offer'}">${isOffer ? 'Озвучка' : 'Без озвучки'}</td>
+      <td class="reason-cell">${isOffer ? '—' : reasonLabelById(c.noOfferReason)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -1046,26 +1424,45 @@ setInterval(() => {
 /* ===========================================================
    ОБРАБОТЧИКИ КНОПОК
    =========================================================== */
-document.getElementById('btnOffer').addEventListener('click', () => addClick(true));
-document.getElementById('btnNoOffer').addEventListener('click', () => addClick(false));
+document.getElementById('btnOffer').addEventListener('click', handleOfferClick);
+document.getElementById('btnNoOffer').addEventListener('click', openReasonModal);
 document.getElementById('btnUndo').addEventListener('click', undoLast);
 document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
 document.getElementById('btnClearData').addEventListener('click', clearAllData);
 
+buildReasonOptions();
+
 /* ===========================================================
    ГОРЯЧИЕ КЛАВИШИ
+   Space — озвучка (сохраняется сразу).
+   N — открывает модалку выбора причины (звонок ещё не сохранён).
+   Внутри модалки: 1/2/3 — выбор причины, Escape — закрыть без сохранения.
    =========================================================== */
 document.addEventListener('keydown', (e) => {
   const tag = document.activeElement.tagName;
   const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   if(isTyping) return;
 
+  if(isReasonModalOpen){
+    if(e.key === 'Escape'){
+      e.preventDefault();
+      closeReasonModal();
+      return;
+    }
+    const reason = NO_OFFER_REASONS.find(r => r.key === e.key);
+    if(reason){
+      e.preventDefault();
+      handleNoOfferReasonSelected(reason.id);
+    }
+    return;
+  }
+
   if(e.code === 'Space'){
     e.preventDefault();
-    addClick(true);
+    handleOfferClick();
   } else if(e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т'){
     // 'т' — та же клавиша, что 'n', в русской раскладке
-    addClick(false);
+    openReasonModal();
   }
 });
 
@@ -1073,8 +1470,9 @@ document.addEventListener('keydown', (e) => {
    АРХИТЕКТУРНЫЙ ЗАДЕЛ ПОД БУДУЩИЙ КОМПАКТНЫЙ РЕЖИМ (мини-кликер)
    Все данные и расчёты уже вынесены в чистые функции
    (calculateDailyGoalProgress, calculateKPI, calculateNeededOffersForKPI,
-   calculateCurrentPace), поэтому компактный виджет сможет переиспользовать
-   их напрямую и рендерить только свой собственный, урезанный DOM.
+   calculateNoOfferReasonStats, calculateCurrentPace), поэтому компактный
+   виджет сможет переиспользовать их напрямую, рендеря только свой
+   собственный, урезанный DOM — без дублирования логики.
    =========================================================== */
 
 /* ===========================================================
